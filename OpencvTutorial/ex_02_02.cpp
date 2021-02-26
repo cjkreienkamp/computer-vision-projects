@@ -13,10 +13,6 @@
 4. Drag any corner of the outline to change its transformation.
 This exercise should be built on a set of pixel coordinate and transformation classes, either implemented by yourself or from a software library. Persistence of the created representation (save and load) should also be supported (for each rectangle, save its transformation).*/
 
-// ?? find the homography from the new geometric form back to the original square
-// ?? display this homography
-// ?? enable a button to return to the original square
-
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
@@ -33,10 +29,9 @@ int buttonLength = 200;
 Mat img(imgHeight,imgLength+buttonLength, CV_8UC3, Scalar(255,255,255));
 bool imgDrawn = false;
 bool clicking = false;
-int buttonPressed = 5;
-vector<string> deformation = {"translation", "rotation", "similarity", "affine", "perspective"};
+int buttonPressed = 6;
+vector<string> deformation = {"translation", "rotation", "similarity", "affine", "perspective","homography"};
 string deformationType;
-
 
 // Function to perform matrix multiplication
 vector<vector<double>> MxM(vector<vector<double>> A, vector<vector<double>> B) {
@@ -57,17 +52,17 @@ vector<vector<double>> MxM(vector<vector<double>> A, vector<vector<double>> B) {
 }
 
 // Function to redraw the canvas
-void drawCanvas(Mat image = img, Point a = Point(INT_MIN,INT_MIN), Point b = Point(0,0), Point c = Point(0,0), Point d = Point(0,0)) {
+void drawCanvas(Mat image = img, Point a = Point(INT_MIN,INT_MIN), Point b = Point(0,0), Point c = Point(0,0), Point d = Point(0,0), Point e = Point(0,0), Point f = Point(0,0), Point g = Point(0,0), Point h = Point(0,0)) {
     img.setTo(Scalar(255,255,255)); // create a blank canvas
     
-    for (int i=0; i<5; i++)         // draw buttons
+    for (int i=0; i<deformation.size(); i++)         // draw buttons
     {
-        putText(img, deformation[i], Point(imgLength+buttonLength*0.1,imgHeight*(i/5.0+0.1)), FONT_HERSHEY_PLAIN, 1.5, Scalar(0,0,255), 2);
-        rectangle(img, Point(imgLength,imgHeight*i/5.0), Point(imgLength+buttonLength,imgHeight*(i/5.0+0.2)), Scalar(0,0,0), 2);
+        putText(img, deformation[i], Point(imgLength+buttonLength*0.1,imgHeight*(i/6.0+0.1)), FONT_HERSHEY_PLAIN, 1.5, Scalar(0,0,255), 2);
+        rectangle(img, Point(imgLength,imgHeight*i/6.0), Point(imgLength+buttonLength,imgHeight*(i/6.0+1.0/deformation.size())), Scalar(0,0,0), 2);
     }
     
-    if (buttonPressed < 5) {        // if a button is pressed, make it blue instead of red
-        putText(img, deformation[buttonPressed], Point(imgLength+buttonLength*0.1,imgHeight*(buttonPressed/5.0+0.1)), FONT_HERSHEY_PLAIN, 1.5, Scalar(255,0,0), 2);
+    if (buttonPressed < deformation.size()) {        // if a button is pressed, make it blue instead of red
+        putText(img, deformation[buttonPressed], Point(imgLength+buttonLength*0.1,imgHeight*(buttonPressed/6.0+0.1)), FONT_HERSHEY_PLAIN, 1.5, Scalar(255,0,0), 2);
     }
     
     if (a != Point(INT_MIN,INT_MIN)) {
@@ -92,6 +87,17 @@ public:
     Point2f centroid;
     Point2f holderPoint;
     double holderAngle;
+    Mat H;
+    
+    void calculateHomography() {
+        vector<Point2f> src = {pt1, pt2, pt3, pt4};
+        vector<Point2f> dst = {startPoint,Point(endPoint.x, startPoint.y),endPoint,Point(startPoint.x, endPoint.y)};
+        H = getPerspectiveTransform(src,dst);
+        cout<<"H: "<<endl;
+        cout<<H<<endl;
+        cout<<"src: "<<src<<endl;
+        cout<<"dst: "<<dst<<endl;
+    }
     
     void set_endPoint(Point tendPoint) {
         endPoint = tendPoint;
@@ -119,6 +125,7 @@ public:
             pt4.x = newpt4[0][0];
             pt4.y = newpt4[1][0];
         }
+        calculateHomography();
     }
     
     void translation(Point p) {
@@ -160,11 +167,12 @@ public:
         pt1 -= pt4; pt2 -= pt3;
         vector<vector<double>> newpt1 = MxM(A1, {{pt1.x},{pt1.y},{1}});
         vector<vector<double>> newpt2 = MxM(A2, {{pt2.x},{pt2.y},{1}});
-        drawCanvas(img, Point(newpt1[0][0],newpt1[1][0]), Point(newpt2[0][0],newpt2[1][0]), pt3, pt4);
+        drawCanvas(img, Point(newpt1[0][0],newpt1[1][0]), Point(newpt2[0][0],newpt2[1][0]), pt3, pt4,startPoint,Point(endPoint.x, startPoint.y),endPoint,Point(startPoint.x, endPoint.y));
         if (!clicking) {
             pt1 = Point(newpt1[0][0],newpt1[1][0]);
             pt2 = Point(newpt2[0][0],newpt2[1][0]);
         } else {pt1 += pt4; pt2 += pt3;}
+        calculateHomography();
     }
     
     void perspective(Point p) {
@@ -172,6 +180,20 @@ public:
         else if (abs(p.x-pt2.x)<20 && abs(p.y-pt2.y)<20) {pt2 = p;}
         else if (abs(p.x-pt3.x)<20 && abs(p.y-pt3.y)<20) {pt3 = p;}
         else if (abs(p.x-pt4.x)<20 && abs(p.y-pt4.y)<20) {pt4 = p;}
+        drawCanvas(img, pt1, pt2, pt3, pt4);
+        calculateHomography();
+    }
+    
+    void homography(Point p) {
+        calculateHomography();
+        pt1.x = pt1.x*H.at<double>(0,0) + pt1.y*H.at<double>(0,1) + H.at<double>(0,2);
+        pt1.y = pt1.x*H.at<double>(1,0) + pt1.y*H.at<double>(1,1) + H.at<double>(1,2);
+        pt2.x = pt2.x*H.at<double>(0,0) + pt2.y*H.at<double>(0,1) + H.at<double>(0,2);
+        pt2.y = pt2.x*H.at<double>(1,0) + pt2.y*H.at<double>(1,1) + H.at<double>(1,2);
+        pt3.x = pt3.x*H.at<double>(0,0) + pt3.y*H.at<double>(0,1) + H.at<double>(0,2);
+        pt3.y = pt3.x*H.at<double>(1,0) + pt3.y*H.at<double>(1,1) + H.at<double>(1,2);
+        pt4.x = pt4.x*H.at<double>(0,0) + pt4.y*H.at<double>(0,1) + H.at<double>(0,2);
+        pt4.y = pt4.x*H.at<double>(1,0) + pt4.y*H.at<double>(1,1) + H.at<double>(1,2);
         drawCanvas(img, pt1, pt2, pt3, pt4);
     }
 };
@@ -184,11 +206,12 @@ void CallBackFunc(int event, int x, int y, int flags, void* userdata) {
     if  ( event == EVENT_LBUTTONDOWN ) {
          clicking = true;
          if  (x > imgLength && imgDrawn) {
-             if (y<0.2*imgHeight) {buttonPressed = 0;}
-             else if (y<0.4*imgHeight) {buttonPressed = 1;}
-             else if (y<0.6*imgHeight) {buttonPressed = 2;}
-             else if (y<0.8*imgHeight) {buttonPressed = 3;}
-             else {buttonPressed = 4;}
+             if (y<1.0/deformation.size()*imgHeight) {buttonPressed = 0;}
+             else if (y<2.0/deformation.size()*imgHeight) {buttonPressed = 1;}
+             else if (y<3.0/deformation.size()*imgHeight) {buttonPressed = 2;}
+             else if (y<4.0/deformation.size()*imgHeight) {buttonPressed = 3;}
+             else if (y<5.0/deformation.size()*imgHeight) {buttonPressed = 4;}
+             else {buttonPressed = 5;}
              deformationType = deformation[buttonPressed];
              drawCanvas(img, rect1.pt1, rect1.pt2, rect1.pt3, rect1.pt4);
          } else if (deformationType == "translation") {rect1.holderPoint = Point(x,y);}
@@ -196,6 +219,7 @@ void CallBackFunc(int event, int x, int y, int flags, void* userdata) {
          else if (deformationType == "similarity") {rect1.holderPoint = Point(x,y);}
          else if (deformationType == "affine") {rect1.holderAngle = atan2(y-rect1.pt4.y, x-(rect1.pt4.x+rect1.pt3.x)/2);}
          else if (deformationType == "perspective") {}
+         else if (deformationType == "homography") {}
          else {
              drawCanvas();
              rect1.startPoint = Point(x,y);
@@ -210,6 +234,7 @@ void CallBackFunc(int event, int x, int y, int flags, void* userdata) {
             else if (deformationType == "similarity") {rect1.similarity(Point(x,y));}
             else if (deformationType == "affine") {rect1.affine(Point(x,y));}
             else if (deformationType == "perspective") {rect1.perspective(Point(x,y));}
+            else if (deformationType == "homography") {}
             else {
             drawCanvas();
             rectangle(img, rect1.startPoint, Point(x,y), Scalar(0,0,255), 3);
@@ -225,6 +250,7 @@ void CallBackFunc(int event, int x, int y, int flags, void* userdata) {
         else if (deformationType == "similarity") {rect1.similarity(Point(x,y));}
         else if (deformationType == "affine") {rect1.affine(Point(x,y));}
         else if (deformationType == "perspective") {rect1.perspective(Point(x,y));}
+        else if (deformationType == "homography") {rect1.homography(Point(x,y));}
         else {
             rect1.set_endPoint(Point(x,y));
             rectangle(img, rect1.startPoint, rect1.endPoint, Scalar(0,0,255), 3);
