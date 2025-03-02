@@ -57,26 +57,27 @@ To explore or execute the projects:
 
 3. **Build the projects**:
 
-  - Navigate to the project's directory:
-    ```bash
-    cd Chapters/Chapter1
-    
-  - Create a build directory:
-    ```bash
-    mkdir build
-    cd build
-    
-  - Run Cmake to configure the project:
-    ```bash
-    cmake ..
-    
-  - Build the project:
-    ```bash
-    make
-    
-  - Execute the compiled program:
-    ```bash
-    ./Chapter1
+   - Navigate to the project's directory:
+     ```bash
+     cd Chapters/Chapter1
+     ```
+   - Create a build directory:
+     ```bash
+     mkdir build
+     cd build
+     ```
+   - Run Cmake to configure the project:
+     ```bash
+     cmake ..
+     ```
+
+   - Build the project:
+      ```bash
+      make
+
+   - Execute the compiled program:
+     ```bash
+     ./Chapter1
     
   Repeat these steps for other chapters or projects as needed.
 
