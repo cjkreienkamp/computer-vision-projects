@@ -38,7 +38,7 @@ The repository is organized into the following directories and files:
   - **extraFunctions.cpp**: Utility functions supporting various projects and tutorials.
   - **OpenCVTutorial.entitlements**: Entitlement configurations for macOS.
   - **OpenCVTutorial.xcodeproj.zip**: Xcode project files for macOS users.
-
+- **Examples/**: Contains various examples from a course.
 
 ## Getting Started
 
